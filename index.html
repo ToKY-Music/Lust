@@ -52,6 +52,8 @@
     let expansionFactor = 1;
     const expansionRate = 1.01; // Slower expansion rate for better scaling
 
+    let currentColor = { r: 255, g: 0, b: 0 }; // Initial color
+
     function setupAudioProcessing() {
       if (!audioContext) {
         audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -69,6 +71,14 @@
       }
     }
 
+    function getNextColor(prevColor) {
+      const channels = ['r', 'g', 'b'];
+      const channelToChange = channels[Math.floor(Math.random() * channels.length)];
+      const newColor = { ...prevColor };
+      newColor[channelToChange] = Math.min(255, Math.max(0, newColor[channelToChange] + (Math.random() > 0.5 ? 1 : -1)));
+      return newColor;
+    }
+
     function createTunnelSegment(baseRadius = Math.min(canvas.width, canvas.height) / 3 * expansionFactor) {
       analyser.getByteFrequencyData(dataArray);
       const segment = [];
@@ -78,13 +88,15 @@
         const y = Math.sin(angle) * baseRadius * (dataArray[i] / 255);
         segment.push({ x, y });
       }
-      tunnelSegments.push(segment);
+      tunnelSegments.push({ segment, color: { ...currentColor } });
+      currentColor = getNextColor(currentColor);
+
       while (tunnelSegments.length > maxSegments) {
         tunnelSegments.shift();
       }
     }
 
-    function drawFractalSegment(segment, centerX, centerY, scale) {
+    function drawFractalSegment(segment, centerX, centerY, scale, color) {
       ctx.beginPath();
       segment.forEach(({ x, y }, i) => {
         const screenX = centerX + x * scale;
@@ -96,7 +108,7 @@
         }
       });
       ctx.closePath();
-      ctx.strokeStyle = `hsl(${Math.random() * 360}, 100%, 50%)`;
+      ctx.strokeStyle = `rgb(${color.r}, ${color.g}, ${color.b})`;
       ctx.stroke();
     }
 
@@ -110,15 +122,15 @@
 
       // Draw multiple layers of the fractal to fill the screen
       while (fractalScale > 0.5) {
-        tunnelSegments.forEach(segment => {
-          drawFractalSegment(segment, centerX, centerY, fractalScale);
+        tunnelSegments.forEach(({ segment, color }) => {
+          drawFractalSegment(segment, centerX, centerY, fractalScale, color);
         });
         fractalScale /= 2;
       }
 
-      expansionFactor *= expansionRate; // Gradually expand the waveforms
+      expansionFactor = 1; // Reset expansion factor to keep the center always visible
+      createTunnelSegment(baseRadius);
 
-      createTunnelSegment(baseRadius * expansionFactor);
       animationFrameId = requestAnimationFrame(drawTunnel);
     }
 
