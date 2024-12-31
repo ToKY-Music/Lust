@@ -50,7 +50,7 @@
     const maxSegments = 100;
 
     let expansionFactor = 1;
-    const expansionRate = 1.02; // Faster expansion rate
+    const expansionRate = 1.01; // Slower expansion rate for better scaling
 
     function setupAudioProcessing() {
       if (!audioContext) {
@@ -69,7 +69,7 @@
       }
     }
 
-    function createTunnelSegment(baseRadius = Math.max(canvas.width, canvas.height) / 2 * expansionFactor) {
+    function createTunnelSegment(baseRadius = Math.min(canvas.width, canvas.height) / 3 * expansionFactor) {
       analyser.getByteFrequencyData(dataArray);
       const segment = [];
       for (let i = 0; i < dataArray.length; i++) {
@@ -105,10 +105,10 @@
       const centerX = canvas.width / 2;
       const centerY = canvas.height / 2;
 
-      const baseRadius = Math.max(canvas.width, canvas.height) / 2;
+      const baseRadius = Math.min(canvas.width, canvas.height) / 3;
       let fractalScale = expansionFactor;
 
-      // Draw multiple layers of the fractal to keep filling the screen
+      // Draw multiple layers of the fractal to fill the screen
       while (fractalScale > 0.5) {
         tunnelSegments.forEach(segment => {
           drawFractalSegment(segment, centerX, centerY, fractalScale);
