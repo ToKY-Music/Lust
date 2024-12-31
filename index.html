@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MV Style Web</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background-color: white;
+    }
+    #startButton {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      padding: 20px 40px;
+      font-size: 1.5rem;
+      background-color: #007BFF;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    canvas {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <button id="startButton">Play Music</button>
+  <canvas id="tunnelCanvas"></canvas>
+  <audio id="audio" src="241231_Last.mp3"></audio>
+  
+  <script>
+    const canvas = document.getElementById('tunnelCanvas');
+    const ctx = canvas.getContext('2d');
+    const audio = document.getElementById('audio');
+    const startButton = document.getElementById('startButton');
+
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    let audioContext, analyser, dataArray;
+    let animationFrameId;
+
+    function setupAudioProcessing() {
+      audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const source = audioContext.createMediaElementSource(audio);
+      analyser = audioContext.createAnalyser();
+
+      source.connect(analyser);
+      analyser.connect(audioContext.destination);
+
+      analyser.fftSize = 256;
+      const bufferLength = analyser.frequencyBinCount;
+      dataArray = new Uint8Array(bufferLength);
+    }
+
+    function drawTunnel() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      analyser.getByteFrequencyData(dataArray);
+
+      const centerX = canvas.width / 2;
+      const centerY = canvas.height / 2;
+      const maxRadius = Math.min(canvas.width, canvas.height) / 2;
+
+      for (let i = 0; i < dataArray.length; i++) {
+        const angle = (i / dataArray.length) * Math.PI * 2;
+        const radius = maxRadius * (dataArray[i] / 255);
+
+        const x = centerX + Math.cos(angle) * radius;
+        const y = centerY + Math.sin(angle) * radius;
+
+        ctx.beginPath();
+        ctx.arc(x, y, 5, 0, Math.PI * 2);
+        ctx.fillStyle = `hsl(${(i / dataArray.length) * 360}, 100%, 50%)`;
+        ctx.fill();
+      }
+
+      animationFrameId = requestAnimationFrame(drawTunnel);
+    }
+
+    function startExperience() {
+      setupAudioProcessing();
+      audio.play();
+      drawTunnel();
+      startButton.style.display = 'none';
+    }
+
+    startButton.addEventListener('click', () => {
+      if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        setupAudioProcessing();
+      }
+      audioContext.resume().then(() => {
+        audio.play();
+        drawTunnel();
+        startButton.style.display = 'none';
+      });
+    });
+
+    window.addEventListener('resize', () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    });
+  </script>
+</body>
+</html>
