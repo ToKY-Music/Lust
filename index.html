@@ -31,7 +31,7 @@
 <body>
   <button id="startButton">Play Music</button>
   <canvas id="tunnelCanvas"></canvas>
-  <audio id="audio" src="241231_Last.mp3"></audio>
+  <audio id="audio" src="your-song.mp3"></audio>
 
   <script>
     const canvas = document.getElementById('tunnelCanvas');
@@ -48,6 +48,8 @@
     const tunnelSegments = [];
     const segmentDepth = 50;
     const maxSegments = 100;
+
+    let expansionFactor = 1;
 
     function setupAudioProcessing() {
       if (!audioContext) {
@@ -69,11 +71,11 @@
     function createTunnelSegment() {
       analyser.getByteFrequencyData(dataArray);
       const segment = [];
-      const radius = Math.min(canvas.width, canvas.height) / 4;
+      const baseRadius = Math.max(canvas.width, canvas.height) / 2 * expansionFactor;
       for (let i = 0; i < dataArray.length; i++) {
         const angle = (i / dataArray.length) * Math.PI * 2;
-        const x = Math.cos(angle) * radius * (dataArray[i] / 255);
-        const y = Math.sin(angle) * radius * (dataArray[i] / 255);
+        const x = Math.cos(angle) * baseRadius * (dataArray[i] / 255);
+        const y = Math.sin(angle) * baseRadius * (dataArray[i] / 255);
         segment.push({ x, y });
       }
       tunnelSegments.push(segment);
@@ -106,6 +108,7 @@
         ctx.stroke();
       });
 
+      expansionFactor *= 1.01; // Gradually expand the waveforms
       createTunnelSegment();
       animationFrameId = requestAnimationFrame(drawTunnel);
     }
