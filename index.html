@@ -50,6 +50,7 @@
     const maxSegments = 100;
 
     let expansionFactor = 1;
+    const expansionRate = 1.02; // Faster expansion rate
 
     function setupAudioProcessing() {
       if (!audioContext) {
@@ -68,10 +69,9 @@
       }
     }
 
-    function createTunnelSegment() {
+    function createTunnelSegment(baseRadius = Math.max(canvas.width, canvas.height) / 2 * expansionFactor) {
       analyser.getByteFrequencyData(dataArray);
       const segment = [];
-      const baseRadius = Math.max(canvas.width, canvas.height) / 2 * expansionFactor;
       for (let i = 0; i < dataArray.length; i++) {
         const angle = (i / dataArray.length) * Math.PI * 2;
         const x = Math.cos(angle) * baseRadius * (dataArray[i] / 255);
@@ -84,32 +84,41 @@
       }
     }
 
+    function drawFractalSegment(segment, centerX, centerY, scale) {
+      ctx.beginPath();
+      segment.forEach(({ x, y }, i) => {
+        const screenX = centerX + x * scale;
+        const screenY = centerY + y * scale;
+        if (i === 0) {
+          ctx.moveTo(screenX, screenY);
+        } else {
+          ctx.lineTo(screenX, screenY);
+        }
+      });
+      ctx.closePath();
+      ctx.strokeStyle = `hsl(${Math.random() * 360}, 100%, 50%)`;
+      ctx.stroke();
+    }
+
     function drawTunnel() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       const centerX = canvas.width / 2;
       const centerY = canvas.height / 2;
 
-      tunnelSegments.forEach((segment, index) => {
-        const depth = index * segmentDepth;
-        const scale = 500 / (500 + depth);
+      const baseRadius = Math.max(canvas.width, canvas.height) / 2;
+      let fractalScale = expansionFactor;
 
-        ctx.beginPath();
-        segment.forEach(({ x, y }, i) => {
-          const screenX = centerX + x * scale;
-          const screenY = centerY + y * scale;
-          if (i === 0) {
-            ctx.moveTo(screenX, screenY);
-          } else {
-            ctx.lineTo(screenX, screenY);
-          }
+      // Draw multiple layers of the fractal to keep filling the screen
+      while (fractalScale > 0.5) {
+        tunnelSegments.forEach(segment => {
+          drawFractalSegment(segment, centerX, centerY, fractalScale);
         });
-        ctx.closePath();
-        ctx.strokeStyle = `hsl(${(index / tunnelSegments.length) * 360}, 100%, 50%)`;
-        ctx.stroke();
-      });
+        fractalScale /= 2;
+      }
 
-      expansionFactor *= 1.01; // Gradually expand the waveforms
-      createTunnelSegment();
+      expansionFactor *= expansionRate; // Gradually expand the waveforms
+
+      createTunnelSegment(baseRadius * expansionFactor);
       animationFrameId = requestAnimationFrame(drawTunnel);
     }
 
