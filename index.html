@@ -32,7 +32,7 @@
   <button id="startButton">Play Music</button>
   <canvas id="tunnelCanvas"></canvas>
   <audio id="audio" src="241231_Last.mp3"></audio>
-  
+
   <script>
     const canvas = document.getElementById('tunnelCanvas');
     const ctx = canvas.getContext('2d');
@@ -44,6 +44,11 @@
 
     let audioContext, analyser, dataArray;
     let animationFrameId;
+
+    let cameraZ = 0;
+    const tunnelSegments = [];
+    const segmentDepth = 50;
+    const maxSegments = 100;
 
     function setupAudioProcessing() {
       audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -58,26 +63,54 @@
       dataArray = new Uint8Array(bufferLength);
     }
 
-    function drawTunnel() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
+    function createTunnelSegment() {
       analyser.getByteFrequencyData(dataArray);
-
-      const centerX = canvas.width / 2;
-      const centerY = canvas.height / 2;
-      const maxRadius = Math.min(canvas.width, canvas.height) / 2;
-
+      const segment = [];
+      const radius = Math.min(canvas.width, canvas.height) / 4;
       for (let i = 0; i < dataArray.length; i++) {
         const angle = (i / dataArray.length) * Math.PI * 2;
-        const radius = maxRadius * (dataArray[i] / 255);
+        const x = Math.cos(angle) * radius * (dataArray[i] / 255);
+        const y = Math.sin(angle) * radius * (dataArray[i] / 255);
+        segment.push({ x, y });
+      }
+      tunnelSegments.push(segment);
+      if (tunnelSegments.length > maxSegments) {
+        tunnelSegments.shift();
+      }
+    }
 
-        const x = centerX + Math.cos(angle) * radius;
-        const y = centerY + Math.sin(angle) * radius;
+    function drawTunnel() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const centerX = canvas.width / 2;
+      const centerY = canvas.height / 2;
+
+      for (let z = 0; z < tunnelSegments.length; z++) {
+        const segment = tunnelSegments[z];
+        const depth = z * segmentDepth - cameraZ;
+        if (depth < 0) continue;
+
+        const scale = 500 / (500 + depth);
 
         ctx.beginPath();
-        ctx.arc(x, y, 5, 0, Math.PI * 2);
-        ctx.fillStyle = `hsl(${(i / dataArray.length) * 360}, 100%, 50%)`;
-        ctx.fill();
+        for (let i = 0; i < segment.length; i++) {
+          const { x, y } = segment[i];
+          const screenX = centerX + x * scale;
+          const screenY = centerY + y * scale;
+          if (i === 0) {
+            ctx.moveTo(screenX, screenY);
+          } else {
+            ctx.lineTo(screenX, screenY);
+          }
+        }
+        ctx.closePath();
+        ctx.strokeStyle = `hsl(${(z / tunnelSegments.length) * 360}, 100%, 50%)`;
+        ctx.stroke();
+      }
+
+      cameraZ += 2;
+      if (cameraZ >= segmentDepth) {
+        cameraZ = 0;
+        createTunnelSegment();
       }
 
       animationFrameId = requestAnimationFrame(drawTunnel);
@@ -86,6 +119,9 @@
     function startExperience() {
       setupAudioProcessing();
       audio.play();
+      for (let i = 0; i < maxSegments; i++) {
+        createTunnelSegment();
+      }
       drawTunnel();
       startButton.style.display = 'none';
     }
@@ -97,8 +133,7 @@
       }
       audioContext.resume().then(() => {
         audio.play();
-        drawTunnel();
-        startButton.style.display = 'none';
+        startExperience();
       });
     });
 
