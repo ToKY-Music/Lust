@@ -117,13 +117,19 @@
     }
 
     function startExperience() {
-      setupAudioProcessing();
+      if (!audioContext) {
+        setupAudioProcessing();
+      }
       audio.play();
+      createInitialSegments();
+      drawTunnel();
+      startButton.style.display = 'none';
+    }
+
+    function createInitialSegments() {
       for (let i = 0; i < maxSegments; i++) {
         createTunnelSegment();
       }
-      drawTunnel();
-      startButton.style.display = 'none';
     }
 
     startButton.addEventListener('click', () => {
@@ -132,7 +138,6 @@
         setupAudioProcessing();
       }
       audioContext.resume().then(() => {
-        audio.play();
         startExperience();
       });
     });
