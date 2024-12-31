@@ -45,7 +45,6 @@
     let audioContext, analyser, dataArray;
     let animationFrameId;
 
-    let cameraZ = 0;
     const tunnelSegments = [];
     const segmentDepth = 50;
     const maxSegments = 100;
@@ -78,7 +77,7 @@
         segment.push({ x, y });
       }
       tunnelSegments.push(segment);
-      if (tunnelSegments.length > maxSegments) {
+      while (tunnelSegments.length > maxSegments) {
         tunnelSegments.shift();
       }
     }
@@ -88,16 +87,12 @@
       const centerX = canvas.width / 2;
       const centerY = canvas.height / 2;
 
-      for (let z = 0; z < tunnelSegments.length; z++) {
-        const segment = tunnelSegments[z];
-        const depth = z * segmentDepth - cameraZ;
-        if (depth < 0) continue;
-
+      tunnelSegments.forEach((segment, index) => {
+        const depth = index * segmentDepth;
         const scale = 500 / (500 + depth);
 
         ctx.beginPath();
-        for (let i = 0; i < segment.length; i++) {
-          const { x, y } = segment[i];
+        segment.forEach(({ x, y }, i) => {
           const screenX = centerX + x * scale;
           const screenY = centerY + y * scale;
           if (i === 0) {
@@ -105,33 +100,24 @@
           } else {
             ctx.lineTo(screenX, screenY);
           }
-        }
+        });
         ctx.closePath();
-        ctx.strokeStyle = `hsl(${(z / tunnelSegments.length) * 360}, 100%, 50%)`;
+        ctx.strokeStyle = `hsl(${(index / tunnelSegments.length) * 360}, 100%, 50%)`;
         ctx.stroke();
-      }
+      });
 
-      cameraZ += 2;
-      if (cameraZ >= segmentDepth) {
-        cameraZ = 0;
-        createTunnelSegment();
-      }
-
+      createTunnelSegment();
       animationFrameId = requestAnimationFrame(drawTunnel);
     }
 
     function startExperience() {
       setupAudioProcessing();
       audio.play();
-      createInitialSegments();
-      drawTunnel();
-      startButton.style.display = 'none';
-    }
-
-    function createInitialSegments() {
       for (let i = 0; i < maxSegments; i++) {
         createTunnelSegment();
       }
+      drawTunnel();
+      startButton.style.display = 'none';
     }
 
     startButton.addEventListener('click', () => {
